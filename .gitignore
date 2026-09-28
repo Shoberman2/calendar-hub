@@ -10,6 +10,9 @@ connection.json
 target.json
 last-run.json
 scheduler.json
+profile.json
+connections.json
+calendars.json
 *.log
 __pycache__/
 *.pyc
