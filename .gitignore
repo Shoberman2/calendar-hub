@@ -1,0 +1,10 @@
+.calendar-hub/
+.env
+.env.*
+!.env.example
+*.ics
+*.log
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
