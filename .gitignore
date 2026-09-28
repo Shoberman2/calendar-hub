@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 *.ics
+*.manifest.json
 *.log
 __pycache__/
 *.pyc

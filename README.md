@@ -4,6 +4,14 @@ Bring school, personal, and work calendars into Apple Calendar and Google Calend
 
 **An early, open-source assistant workflow, not a hosted sync service.** The included Python utility builds class calendars locally. Claude performs account setup through whatever authorized browser, desktop, and calendar tools are available in your session. This repository does not give Claude those tools or account access.
 
+| Capability | Current implementation |
+| --- | --- |
+| Generate class-calendar files | Implemented locally; tested with synthetic schedules |
+| Connect Apple, Google, Outlook and LMS accounts | Claude-guided procedure requiring available tools and user sign-in |
+| Recover missing emailed invitations | Claude-guided investigation; no email ingestion service in this repo |
+| Daily autonomous reconciliation | Procedure for a host scheduler; not installed by cloning |
+| Guaranteed complete, real-time, two-way sync | Not implemented or claimed |
+
 ## Start with Claude Code
 
 ```sh
@@ -46,7 +54,7 @@ Publishing iCloud or Outlook calendars lets anyone holding the link read the per
 
 ## Local class-calendar utility
 
-Requires Python 3.10+ and an installed IANA timezone database (standard on macOS). No Python packages, network requests, or account credentials needed.
+Requires macOS or Linux, Python 3.10+, and an installed IANA timezone database (standard on macOS). No Python packages, network requests, or account credentials needed. Existing state/output directories must be owned by you and private (0700); existing state files must be private regular files (0600). Unsafe permissions or links are rejected without changing your files.
 
 ```sh
 python3 calendar_hub.py init

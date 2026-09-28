@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import sys
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -147,15 +148,41 @@ def render(events, now=None):
     return ('\r\n'.join(fold_line(line) for line in lines) + '\r\n').encode('utf-8')
 
 
-def private_write(path, payload):
-    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, 'wb') as output:
-        output.write(payload)
+def private_directory(path):
+    require(os.name == 'posix', 'Private filesystem handling requires macOS or Linux')
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    # Open the actual leaf directory, never a symlink, and keep this descriptor
+    # for relative file operations so a renamed path cannot redirect a write.
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    info = os.fstat(fd)
+    if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) & 0o077:
+        os.close(fd)
+        raise ScheduleError('Local directory must be owned by you with no group/other permissions; review its permissions before continuing')
+    return fd
+
+
+def check_private_file(directory_fd, name):
+    info = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+    require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1
+            and info.st_uid == os.getuid() and not stat.S_IMODE(info.st_mode) & 0o077,
+            'Existing state must be an owned, private regular file without links; review it before continuing')
+
+
+def private_write(path, payload, directory_fd=None):
+    own_directory = directory_fd is None
+    if own_directory:
+        directory_fd = private_directory(path.parent)
+    try:
+        fd = os.open(path.name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                     0o600, dir_fd=directory_fd)
+        with os.fdopen(fd, 'wb') as output:
+            output.write(payload)
+    finally:
+        if own_directory:
+            os.close(directory_fd)
 
 
 def initialize(root=LOCAL):
-    root.mkdir(mode=0o700, parents=True, exist_ok=True)
     example = dict(timezone='America/New_York', namespace='replace-with-unique-term-id', courses=[dict(
         id='example101-lecture', title='EXAMPLE101 — Replace with your course', confirmed=False,
         source='', start_date='2026-08-24', end_date='2026-12-04', days=['MO', 'WE'],
@@ -169,11 +196,15 @@ def initialize(root=LOCAL):
                      'last source refresh, last successful check, and blockers here. '
                      'Keep private feed links in a separate local secret file if needed.\n'
     }
-    for name, content in contents.items():
-        try:
-            private_write(root / name, content.encode())
-        except FileExistsError:
-            pass
+    directory_fd = private_directory(root)
+    try:
+        for name, content in contents.items():
+            try:
+                private_write(root / name, content.encode(), directory_fd)
+            except FileExistsError:
+                check_private_file(directory_fd, name)
+    finally:
+        os.close(directory_fd)
 
 
 def load(path):

@@ -2,6 +2,7 @@ import copy
 import json
 from pathlib import Path
 import tempfile
+import os
 import unittest
 from datetime import datetime, timezone
 
@@ -95,6 +96,70 @@ class ScheduleTests(unittest.TestCase):
             self.assertEqual(before, output.read_bytes())
             manifest = json.loads(output.with_suffix('.manifest.json').read_text())
             self.assertEqual(len(manifest['events']), 3)
+
+    def test_rejects_existing_shared_directory(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / 'state'
+            root.mkdir(mode=0o755)
+            root.chmod(0o755)
+            with self.assertRaises(hub.ScheduleError):
+                hub.initialize(root)
+            self.assertFalse((root / 'classes.json').exists())
+
+    def test_rejects_existing_readable_state_without_changing_it(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / 'state'
+            hub.initialize(root)
+            state = root / 'status.md'
+            state.write_text('synthetic private notes')
+            state.chmod(0o644)
+            with self.assertRaises(hub.ScheduleError):
+                hub.initialize(root)
+            self.assertEqual(state.read_text(), 'synthetic private notes')
+            self.assertEqual(state.stat().st_mode & 0o777, 0o644)
+
+    def test_rejects_symlinked_directory_and_state(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / 'state'
+            target = Path(temp) / 'target'
+            target.mkdir(mode=0o700)
+            root.symlink_to(target, target_is_directory=True)
+            with self.assertRaises(OSError):
+                hub.initialize(root)
+            self.assertEqual(list(target.iterdir()), [])
+            root.unlink()
+            hub.initialize(root)
+            state = root / 'status.md'
+            state.unlink()
+            target_file = target / 'notes'
+            target_file.write_text('untouched')
+            state.symlink_to(target_file)
+            with self.assertRaises(hub.ScheduleError):
+                hub.initialize(root)
+            self.assertEqual(target_file.read_text(), 'untouched')
+
+    def test_private_write_refuses_final_symlink(self):
+        with tempfile.TemporaryDirectory() as temp:
+            target = Path(temp) / 'original'
+            target.write_text('unchanged')
+            output = Path(temp) / 'output'
+            output.symlink_to(target)
+            with self.assertRaises(FileExistsError):
+                hub.private_write(output, b'replacement')
+            self.assertEqual(target.read_text(), 'unchanged')
+
+    def test_directory_descriptor_keeps_write_in_checked_directory(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root, moved = Path(temp) / 'private', Path(temp) / 'moved'
+            fd = hub.private_directory(root)
+            try:
+                root.rename(moved)
+                root.mkdir(mode=0o700)
+                hub.private_write(root / 'export', b'private', fd)
+                self.assertFalse((root / 'export').exists())
+                self.assertEqual((moved / 'export').read_bytes(), b'private')
+            finally:
+                os.close(fd)
 
 
 if __name__ == '__main__':
