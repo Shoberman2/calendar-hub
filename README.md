@@ -4,12 +4,16 @@ Bring school, personal, and work calendars into Apple Calendar and Google Calend
 
 **An early, open-source assistant workflow, not a hosted sync service.** The included Python utility builds class calendars locally. Claude performs account setup through whatever authorized browser, desktop, and calendar tools are available in your session. This repository does not give Claude those tools or account access.
 
+An experimental [Google connection and daily macOS class-sync job](docs/google-sync.md) is now included. It uses your own Google OAuth client, previews changes, and updates a dedicated calendar. Its automated tests use synthetic API responses; live Google and launchd verification are still required.
+
 | Capability | Current implementation |
 | --- | --- |
 | Generate class-calendar files | Implemented locally; tested with synthetic schedules |
 | Connect Apple, Google, Outlook and LMS accounts | Claude-guided procedure requiring available tools and user sign-in |
 | Recover missing emailed invitations | Claude-guided investigation; no email ingestion service in this repo |
-| Daily autonomous reconciliation | Procedure for a host scheduler; not installed by cloning |
+| Google class-event synchronization | Implemented with OAuth, preview, conflict detection and destination verification; live setup validation pending |
+| Daily class sync on macOS | Explicit LaunchAgent installer after a verified live run; not installed by cloning |
+| Daily mail/provider reconciliation | Procedure for a host assistant scheduler; not installed by cloning |
 | Guaranteed complete, real-time, two-way sync | Not implemented or claimed |
 
 ## Start with Claude Code
@@ -48,7 +52,7 @@ Default categories: **school blue, work green, second work account purple, perso
 
 ## Privacy
 
-The repository contains no calendar credentials, live feeds, student schedules, or example owner's account data. Your local `.calendar-hub/` directory is ignored by Git. It is stored locally, not encrypted; your assistant and enabled tools may still process it under their own policies.
+The public repository contains no real calendar credentials, live feeds, student schedules, or example owner's account data. Your local `.calendar-hub/` directory is ignored by Git. The optional Google connector stores refresh credentials there after your consent. Local state is not encrypted; your assistant and enabled tools may still process it under their own policies.
 
 Publishing iCloud or Outlook calendars lets anyone holding the link read the permitted details. Each person chooses whether to publish and what to expose. If they decline, the workflow reports the missing cross-provider view instead of weakening account security. Never paste private feed URLs into issues, screenshots, logs, or public repositories. See [security guidance](SECURITY.md).
 
@@ -76,6 +80,6 @@ The daily task checks new or changed events, confirms course coverage, and repor
 
 ## Release status and contributing
 
-Version 0.1 is a tested local generator plus a documented assistant workflow. Live end-to-end setup across every provider and Claude environment has not been validated. Mail-invitation recovery, provider subscriptions, and daily scheduling are agent-guided, not implemented as API adapters in this CLI. Contributions should add a reproducible provider check and document limitations; use synthetic fixtures, never real account exports.
+This is an experimental release with a tested local generator, a Google class-sync adapter, a macOS class scheduler, and an assistant workflow. Live end-to-end setup across providers and Claude environments has not been validated. Mail-invitation recovery and other provider subscriptions remain agent-guided. Contributions should add a reproducible provider check and document limitations; use synthetic fixtures, never real account exports.
 
 Run the unit tests before submitting a change. Licensed under MIT.

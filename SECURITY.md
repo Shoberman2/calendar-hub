@@ -9,4 +9,6 @@
 - Review `git diff --cached` and `git ls-files` before publishing changes. Gitignore is not a secret scanner.
 - For a suspected vulnerability, use GitHub private vulnerability reporting if enabled. Otherwise open a minimal issue requesting a private channel without sensitive details. Never include real feeds, tokens, or student records in an issue.
 
-The CLI reads local JSON and writes local files. It never contacts providers, imports calendars, stores passwords, or runs a scheduler.
+`calendar_hub.py` only reads/writes local files. The optional `google_sync.py` connector contacts fixed Google HTTPS endpoints and stores OAuth refresh credentials in private local files after consent. It does not store passwords, request mail access, or send invitations. `schedule_sync.py --install` explicitly installs a daily macOS class-sync job only after a successful live sync. Neither runs automatically when you clone the repository.
+
+The expanded connector/scheduler has synthetic tests but has not completed a live provider or independent security audit. The earlier static review covered the original local generator and instructions, not this new integration. Keep the release experimental until those checks are complete.

@@ -4,6 +4,12 @@
 !.env.example
 *.ics
 *.manifest.json
+google-client*.json
+client_secret*.json
+connection.json
+target.json
+last-run.json
+scheduler.json
 *.log
 __pycache__/
 *.pyc
